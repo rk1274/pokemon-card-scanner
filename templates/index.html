@@ -1,0 +1,81 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PokéScan Live</title>
+    <style>
+        body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #13131a; color: #f1f1f1; max-width: 500px; margin: 40px auto; padding: 20px; text-align: center; }
+        .scanner-zone { border: 3px dashed #ffcb05; padding: 40px 20px; border-radius: 16px; background: #1c1c24; cursor: pointer; margin-bottom: 20px; transition: 0.2s; }
+        .scanner-zone:hover { background: #23232f; border-color: #3b4cca; }
+        button { background: #3b4cca; color: #fff; border: none; padding: 14px 28px; font-size: 16px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; box-sizing: border-box; }
+        button:hover { background: #2e3b9e; }
+        #output-card { margin-top: 30px; padding: 24px; border-radius: 16px; background: #1c1c24; border: 1px solid #2d2d3d; display: none; }
+        .card-preview { max-width: 220px; border-radius: 12px; margin-top: 15px; box-shadow: 0 8px 24px rgba(0,0,0,0.6); }
+        .loader { color: #ffcb05; margin: 15px 0; font-weight: 500; font-style: italic; }
+    </style>
+</head>
+<body>
+
+    <h1>PokéScan Web</h1>
+    <p>Snap a photo of any card to query your custom database</p>
+
+    <form id="scanForm">
+        <div class="scanner-zone" onclick="document.getElementById('fileSelector').click()">
+            <p id="promptText">📸 Tap to open camera or drop file here</p>
+            <input type="file" id="fileSelector" name="card_image" accept="image/*" style="display:none;" onchange="showFileSelected()">
+        </div>
+        <button type="submit">Analyze Pixel Metrics</button>
+    </form>
+
+    <div id="loadingStatus" class="loader"></div>
+
+    <div id="output-card">
+        <h2 id="resName">--</h2>
+        <p id="resSet">--</p>
+        <img id="resArt" class="card-preview" src="" alt="Matched Asset Card Art">
+    </div>
+
+    <script>
+        function showFileSelected() {
+            const selector = document.getElementById('fileSelector');
+            if(selector.files.length > 0) {
+                document.getElementById('promptText').innerText = "Target Selected: " + selector.files[0].name;
+            }
+        }
+
+        document.getElementById('scanForm').onsubmit = async (event) => {
+            event.preventDefault();
+            const input = document.getElementById('fileSelector');
+            if (input.files.length === 0) return alert("Select or capture an image first!");
+
+            const uploadPayload = new FormData();
+            uploadPayload.append('card_image', input.files[0]);
+
+            const loader = document.getElementById('loadingStatus');
+            const outputBlock = document.getElementById('output-card');
+            
+            loader.innerText = "Analyzing image via local EasyOCR structures...";
+            outputBlock.style.display = 'none';
+
+            try {
+                const apiResponse = await fetch('/scan', { method: 'POST', body: uploadPayload });
+                const data = await apiResponse.json();
+                loader.innerText = "";
+
+                if (data.success) {
+                    outputBlock.style.display = 'block';
+                    document.getElementById('resName').innerText = data.card.name + " (#" + data.card.number + ")";
+                    document.getElementById('resSet').innerText = "Set: " + data.card.set.name;
+                    document.getElementById('resArt').src = data.card.image_url;
+                } else {
+                    alert(data.message || "Match routine failed.");
+                }
+            } catch (error) {
+                loader.innerText = "";
+                alert("Communication error targeting the engine backend.");
+            }
+        };
+    </script>
+</body>
+</html>
