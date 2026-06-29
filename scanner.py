@@ -3,7 +3,15 @@ import easyocr
 import re
 import sqlite3
 
-READER = easyocr.Reader(['en'], gpu=False)
+READER = None
+
+def get_reader():
+    global READER
+
+    if READER is None:
+        READER = easyocr.Reader(['en'], gpu=False)
+
+    return READER
 
 def extract_card_details(image_path):
     img = cv2.imread(image_path)
@@ -23,7 +31,7 @@ def crop_and_resize(img, width, l, r, horizontal_crop):
     return cv2.resize(gray, (0, 0), fx=2, fy=2, interpolation=cv2.INTER_CUBIC)
 
 def extract_name(top_img):
-    results = READER.readtext(top_img)
+    results = get_reader().readtext(top_img)
 
     card_name = None
     if results:
@@ -52,7 +60,7 @@ def extract_name(top_img):
     return card_name
 
 def extract_number(bottom_img):
-    results = READER.readtext(bottom_img)
+    results = get_reader().readtext(bottom_img)
         
     card_number = None
     card_number_pattern = re.compile(r'(\d+)\s*/\s*(\d+)')
